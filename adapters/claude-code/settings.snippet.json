@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          { "type": "command", "command": "__ADAPTER_DIR__/hook.sh Notification" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "__ADAPTER_DIR__/hook.sh Stop" }
+        ]
+      }
+    ]
+  }
+}
