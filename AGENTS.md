@@ -1,9 +1,10 @@
 # harness-adapters — clawee attention adapters
 
 - Repo: `clawee-git/harness-adapters` (PUBLIC, MIT) · shell + python3 (stdlib)
-  only, no Go module · trunk `main`, integration on `dev` (one worktree per
-  effort under `.worktrees/`, the playbook default) · `gh.account = clawee-git`
-  (call gh via `ghp`, never bare `gh`).
+  only, no Go module · `code/main` is the primary clone on `main`; `code/dev`
+  is a permanent linked worktree on `dev`; effort worktrees live under
+  `code/.worktrees/<branch>` · `gh.account = clawee-git` (call gh via `ghp`,
+  never bare `gh`).
 - What it is: hook scripts that turn a coding harness's own events into clawee
   attention signals (`clawee sessions signal "/$CLAWEE_SID" <kind> [text]`),
   one directory per harness under `adapters/`. `CONTRACT.md` is the contract
