@@ -6,6 +6,38 @@ session's writer. This file is the whole contract; it links to the wire
 definition in `clawee-git/core` (`protocol/viewers.go`, and the README's
 "Viewers" section) and never restates it.
 
+## 0. Program status first
+
+A harness that reports its own state with **OSC 7501** (the [Program Status
+Protocol](https://www.superlogical.com/rex/docs/build/program-status)) needs
+**no adapter**. The escape is plain bytes in the session's output, so clawee's
+holder (the terminal of record for every session) reads it on every route:
+local, ssh, relayed, and through an `ssh` inside the session. The grammar, the
+states and the limits are the spec's; how clawee parses them and maps them
+onto attention is core's README, "Viewers" → "Program status (OSC 7501)".
+This file restates neither.
+
+- **The holder answers the support query.** A program probes with `OSC 7501
+  ; ?`; the holder replies `OSC 7501 ; ?` while a program (not the session
+  shell) is in the foreground. Claude Code ≥ 2.1.295 sends that probe once,
+  at startup, and reports **only when it is answered**: a Claude Code process
+  started before its host's claweed carried program status stays silent until
+  it is restarted. Nothing in the session's environment changes.
+- **Precedence: program > hook > heuristic**, keyed on a **live** program
+  record. While the program's record is `working` or `blocked`, a hook signal
+  is stored but not shown, and the daemon's quiet detection does not run. A
+  non-live record (`done`, `error`, `idle`) is shown, and a newer hook signal
+  or quiet detection replaces it. A keystroke never clears program-sourced
+  attention: the program's next report does. Hook signals from before the
+  record ended (while it was live, or earlier) are dropped when it ends, and
+  they never reappear; a hook signal in the same second as the end survives.
+- **Adapters are the fallback**, for a harness that does not emit OSC 7501
+  (or an older version of one that does). Everything below still holds for
+  them.
+- **A non-agentic job can report too.** A wrapper script around a build or a
+  sync writes the escape to the session's tty itself; see the `status()`
+  snippet in `adapters/example/README.md`.
+
 ## 1. Where an adapter runs
 
 Inside the session — on the clawee **gateway** host, in the shell claweed
@@ -44,8 +76,24 @@ Kinds, and what they mean to a human looking at the session list:
 | `permission` | the harness wants an action approved | the writer's next keystroke, or new output |
 | `idle` | the harness reports nothing to do | the writer's next keystroke, or a `none` |
 | `done` | the harness reports the task finished | the writer's next keystroke, or a `none` |
+| `working` | the harness reports it is busy | the writer's next keystroke, or a `none` — never new output |
+| `error` | the harness reports the task failed | the writer's next keystroke, or a `none` — never new output |
 | `waiting` | the daemon's OWN quiet detection (heuristic); an adapter may send it too | new output, a keystroke |
 | `none` | clear the state explicitly | — |
+
+The clearing column is for hook-sourced attention. Program-sourced attention
+(§0) ignores keystrokes and output: the program's next report or its `clear`
+replaces it, `working` and `blocked` end when the program exits (within about
+5 s; behind an `ssh` inside the session, only when the `ssh` exits), and a
+`none` hides the current report until the program's next one.
+
+**Source.** Attention comes from one of three sources: `program` (an OSC 7501
+report, §0), `hook` (an adapter's `signal`), or `heuristic` (the daemon's quiet
+detection). An adapter never sets it; `clawee sessions signal` is always a
+`hook`. On the wire only program attention carries the `source` field; a
+reader that meets attention without it reads `waiting` as `heuristic` and
+every other kind as `hook` (core's `EffectiveSource`), which is also how an
+older daemon's attention reads. Precedence between the three is §0's.
 
 `text` is a short free line (the question, the command awaiting approval),
 shown beside the kind. Kinds are **append-only**: a future release may add
