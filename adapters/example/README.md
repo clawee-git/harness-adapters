@@ -11,6 +11,11 @@ Replace this table with the harness's own events:
 
 Minimum clawee cli: state it here.
 
+## Hook
+
+`hook.sh` reads the harness's event from whatever the harness offers (stdin,
+argv, the environment), sends exactly one signal, and exits 0 always.
+
 ## Install / uninstall
 
 `install.sh` / `uninstall.sh` — wire and unwire the harness's hook mechanism
