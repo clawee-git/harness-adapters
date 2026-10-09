@@ -1,8 +1,4 @@
 #!/bin/sh
-# install.sh — merge the two clawee hooks into ~/.claude/settings.json
-# (or $CLAUDE_SETTINGS). Idempotent: an already-installed hook is not added
-# twice. A backup settings.json.clawee-bak is written beside the file the
-# first time it is changed. Nothing else in the file is touched.
 set -eu
 dir="$(cd "$(dirname "$0")" && pwd)"
 settings="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"

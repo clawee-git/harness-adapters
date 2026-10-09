@@ -1,5 +1,4 @@
 #!/bin/sh
-# smoke_test.sh — template: the hook sends exactly the expected argv.
 set -eu
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/../.." && pwd)"

@@ -2,7 +2,7 @@
 
 A clawee session is a room: **one writer** (the device holding the keyboard),
 any number of **viewers**, an **attention state** (`none | question |
-permission | idle | done | waiting`) shown in every client's session list, and
+permission | idle | done | waiting | working | error`) shown in every client's session list, and
 a **chat** the viewers use to talk to the writer — human or agent.
 
 A coding harness running inside a session (Claude Code, Codex, aider, …) knows
@@ -16,6 +16,13 @@ permission"* instead of *"live"*.
 harness event ──(hook)──▶ clawee sessions signal "/$CLAWEE_SID" permission "Allow rm -rf?"
                                                  └── the daemon marks the session; every viewer sees it
 ```
+
+**Program status comes first.** A harness that reports its own state with
+OSC 7501 (the [Program Status
+Protocol](https://www.superlogical.com/rex/docs/build/program-status); Claude
+Code from v2.1.295) needs no adapter: clawee's holder reads the report from
+the session's output, and it outranks any hook. Adapters are the fallback for
+harnesses that do not emit it (`CONTRACT.md` §0).
 
 Adapters live here, one directory per harness under `adapters/`. The contract
 they implement is `CONTRACT.md`; how to add one is `CONTRIBUTING.md`. The

@@ -14,9 +14,11 @@
 - **Best-effort is the rule**: every hook exits 0 whatever happens — no
   `CLAWEE_SID`, no `clawee`, a refused signal. A hook that breaks the harness
   is a bug.
-- Tests: `tools/run-tests.sh` runs every `adapters/*/smoke_test.sh` against
-  `tools/fake-clawee.sh` (records argv to `$FAKE_CLAWEE_LOG`); no daemon, no
-  network. No GitHub Actions — the reviewer runs it.
+- Tests: `tools/run-tests.sh` runs every `adapters/*/smoke_test.sh` in turn,
+  then exits non-zero if any failed. Each runs against `tools/fake-clawee.sh`,
+  which stands in for the clawee cli: put first on `PATH` as `clawee`, it
+  records its argv, one invocation per line, to `$FAKE_CLAWEE_LOG` and exits 0.
+  No daemon, no network. No GitHub Actions — the reviewer runs it.
 - Reference adapter: `adapters/claude-code/` (`Notification` → `permission` /
   `question`, `Stop` → `done`; `install.sh` merges two hooks into
   `~/.claude/settings.json` with a `.clawee-bak` backup, `uninstall.sh`

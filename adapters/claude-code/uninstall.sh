@@ -1,5 +1,4 @@
 #!/bin/sh
-# uninstall.sh — remove exactly the two hooks install.sh added.
 set -eu
 dir="$(cd "$(dirname "$0")" && pwd)"
 settings="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"

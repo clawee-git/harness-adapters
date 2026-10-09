@@ -1,6 +1,4 @@
 #!/bin/sh
-# run-tests.sh — every adapter's smoke test, in turn. Exit non-zero on the
-# first failure. This is the reviewer's gate; there is no CI workflow.
 set -eu
 cd "$(dirname "$0")/.."
 status=0
