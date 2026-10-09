@@ -1,6 +1,4 @@
 #!/bin/sh
-# hook.sh — template. Reads the harness event (stdin, argv, env — whatever the
-# harness offers) and sends ONE signal; exits 0 always.
 sid="${CLAWEE_SID:-}"
 [ -n "$sid" ] || exit 0
 clawee="${CLAWEE_BIN:-clawee}"
