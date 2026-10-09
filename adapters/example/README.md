@@ -32,7 +32,7 @@ the spec's limits:
 ```sh
 status() {
   msg=$(printf '%s' "$2" | tr -d '\000-\037\177' | head -c 2048 | base64 | tr -d '\n')
-  printf '\033]7501;state=%s:msg=%s\033\\' "$1" "$msg" >/dev/tty 2>/dev/null || :
+  printf '\033]7501;state=%s:msg=%s\033\\' "$1" "$msg" 2>/dev/null >/dev/tty || :
 }
 
 status working "Syncing photos"
@@ -41,7 +41,8 @@ rsync -a ~/Photos backup:/photos && status done "Photos synced" || status error 
 
 - It writes to the session's tty, not stdout, so a redirected or piped job
   still reports, and it never fails the job: outside a terminal it does
-  nothing.
+  nothing and prints nothing (`2>/dev/null` comes first, so it also silences
+  a `/dev/tty` that cannot be opened).
 - `\033` and `\\` are POSIX `printf`; the spec's `\e` is not. The report ends
   with ST (`ESC \`).
 - `msg` is base64 on one line (`tr -d '\n'`: wrapped base64 breaks the
