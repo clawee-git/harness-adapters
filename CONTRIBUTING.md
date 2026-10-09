@@ -21,8 +21,10 @@ Rules every adapter follows:
    nothing else.
 4. **POSIX sh + python3 (stdlib) at most.** Anything the gateway host may not
    have is a dependency the README must state.
-5. **A smoke test that needs no daemon.** `tools/fake-clawee.sh` records every
-   invocation to `$FAKE_CLAWEE_LOG`; assert on that file.
+5. **A smoke test that needs no daemon.** `tools/fake-clawee.sh` stands in for
+   the clawee cli: copy it as `clawee` into a directory first on `PATH`. It
+   records its argv, one invocation per line, to `$FAKE_CLAWEE_LOG` and exits
+   0; assert on that file.
 
 ## Adding one
 
@@ -39,5 +41,6 @@ once on purpose).
 
 - Trunk `main`, integration on `dev`; PRs into `dev`, merged as merge commits.
 - No GitHub Actions for first-party checks; `tools/run-tests.sh` runs every
-  adapter's smoke test and is what a reviewer runs.
+  adapter's smoke test in turn, then exits non-zero if any failed. It is what
+  a reviewer runs.
 - MIT licence; by contributing you agree your contribution is MIT too.
