@@ -31,7 +31,7 @@ the spec's limits:
 
 ```sh
 status() {
-  msg=$(printf '%s' "$2" | tr -d '\000-\037\177' | head -c 2048 | base64 | tr -d '\n')
+  msg=$(printf '%s' "$2" | LC_ALL=C tr -d '\000-\037\177' | head -c 2048 | base64 | tr -d '\n')
   printf '\033]7501;state=%s:msg=%s\033\\' "$1" "$msg" 2>/dev/null >/dev/tty || :
 }
 
@@ -46,11 +46,14 @@ rsync -a ~/Photos backup:/photos && status done "Photos synced" || status error 
 - `\033` and `\\` are POSIX `printf`; the spec's `\e` is not. The report ends
   with ST (`ESC \`).
 - `msg` is base64 on one line (`tr -d '\n'`: wrapped base64 breaks the
-  report). Control characters are removed first, because the spec discards a
-  report whose text holds one, and the text is cut to 2048 bytes, the spec's
-  decoded `msg` limit (2732 bytes encoded; the whole sequence stays far under
-  4096). The cut counts bytes, so keep messages short enough that it never
-  splits a character.
+  report). The C0 controls (bytes 0x00–0x1F) and DEL (0x7F) are removed
+  first, byte by byte (`LC_ALL=C`, so `tr` never stops on a byte it cannot
+  decode and bytes above 0x7F are kept). Then the text is cut to 2048 bytes,
+  the spec's decoded `msg` limit (2732 bytes encoded; the whole sequence stays
+  far under 4096).
+- **Limitation:** a message holding a C1 control (U+0080–U+009F), or text
+  that is not valid UTF-8, including a character split by the 2048-byte cut,
+  makes clawee discard the report silently. Keep messages short UTF-8 text.
 - `state` is one of the spec's states; inside clawee, `working` hides hook
   signals and the quiet heuristic until the job reports `done` or `error`, or
   exits.
