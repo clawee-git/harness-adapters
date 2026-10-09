@@ -28,8 +28,9 @@ This file restates neither.
   is stored but not shown, and the daemon's quiet detection does not run. A
   non-live record (`done`, `error`, `idle`) is shown, and a newer hook signal
   or quiet detection replaces it. A keystroke never clears program-sourced
-  attention: the program's next report does. Hook signals sent while the
-  record was live are dropped when it ends; they never reappear.
+  attention: the program's next report does. Hook signals from before the
+  record ended (while it was live, or earlier) are dropped when it ends, and
+  they never reappear; a hook signal in the same second as the end survives.
 - **Adapters are the fallback**, for a harness that does not emit OSC 7501
   (or an older version of one that does). Everything below still holds for
   them.
@@ -82,8 +83,9 @@ Kinds, and what they mean to a human looking at the session list:
 
 The clearing column is for hook-sourced attention. Program-sourced attention
 (§0) ignores keystrokes and output: the program's next report or its `clear`
-replaces it, `working` and `blocked` end when the program exits, and a `none`
-hides the current report until the program's next one.
+replaces it, `working` and `blocked` end when the program exits (within about
+5 s; behind an `ssh` inside the session, only when the `ssh` exits), and a
+`none` hides the current report until the program's next one.
 
 **Source.** Attention comes from one of three sources: `program` (an OSC 7501
 report, §0), `hook` (an adapter's `signal`), or `heuristic` (the daemon's quiet
