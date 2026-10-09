@@ -41,12 +41,25 @@ adapters/claude-code/uninstall.sh    # removes exactly those two
 command is the absolute path of this directory's `hook.sh`, so move the
 checkout and re-run `install.sh`.
 
+`install.sh` is idempotent: a hook already present is not added twice. On its
+first run it copies the settings file to `<settings>.clawee-bak` beside it
+and never overwrites that backup. It touches nothing in the file but the two
+hooks.
+
 ## How it works
 
-`hook.sh <event>` reads the event JSON on stdin, picks the kind from the
-table, and runs `clawee sessions signal "/$CLAWEE_SID" <kind> [text]`. It
-exits 0 always: outside a clawee session (`CLAWEE_SID` unset), with no
-`clawee` on `PATH`, or on a failed signal, Claude Code sees nothing.
+Claude Code runs `hook.sh <event>` as a hook, with `<event>` one of
+`Notification` or `Stop` (`settings.snippet.json`); any other event sends
+nothing. The hook reads the event JSON on stdin, picks the kind from the
+table, and runs `clawee sessions signal "/$CLAWEE_SID" <kind> [text]`: one
+signal per event. It exits 0 always: outside a clawee session (`CLAWEE_SID`,
+which claweed sets in every session's shell, is unset), with no `clawee` on
+`PATH`, or on a failed signal, Claude Code sees nothing. `CLAWEE_BIN`
+overrides the path of the clawee cli.
+
+A `Notification` payload is parsed with python3's `json` module, the one
+parser every gateway host has. A missing or malformed payload still signals a
+`question`.
 
 ## Test
 
