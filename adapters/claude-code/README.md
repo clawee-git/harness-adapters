@@ -3,6 +3,22 @@
 Turns Claude Code's hook events into clawee attention signals for the session
 Claude Code runs in.
 
+## Claude Code ≥ 2.1.295: native program status
+
+Claude Code reports its own state over OSC 7501 from **v2.1.295**
+(`CONTRACT.md` §0). It probes once at startup with `OSC 7501 ; ?` and reports
+only when the terminal answers, which a claweed with program status does; the
+environment plays no part (`TERM_PROGRAM` changes nothing). Its reports are
+`working`, `blocked` (permission prompts, with the action as text) and `done`,
+and it sends `clear` itself on exit.
+
+- On those versions **this adapter is optional**. If it is installed, the
+  program's report outranks it: while Claude Code is `working` or `blocked`
+  the hook's signals are not shown.
+- It stays **the fallback** for older Claude Code, for a host whose claweed
+  does not answer the probe yet, and for a Claude Code process started before
+  that claweed was installed (it stays silent until restarted).
+
 | Claude Code event | payload | clawee kind | text |
 |---|---|---|---|
 | `Notification` | `notification_type: permission_prompt` | `permission` | the notification message |
