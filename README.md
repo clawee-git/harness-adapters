@@ -24,6 +24,11 @@ Code from v2.1.295) needs no adapter: clawee's holder reads the report from
 the session's output, and it outranks any hook. Adapters are the fallback for
 harnesses that do not emit it (`CONTRACT.md` §0).
 
+**Notifications need no adapter either.** A session you spawned reports
+`done`, `error`, `blocked.*`, `review` or `gate` as one fixed
+`clawee-notify v0` line, delivered by `clawee notify follow` and `clawee
+notify watch`; what an agent does with each code is `CONTRACT.md` §6.
+
 Adapters live here, one directory per harness under `adapters/`. The contract
 they implement is `CONTRACT.md`; how to add one is `CONTRIBUTING.md`. The
 reference adapter is `adapters/claude-code/`.
