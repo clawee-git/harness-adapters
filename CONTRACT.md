@@ -131,7 +131,8 @@ A **notification** is a coded event from a session you are connected to —
 typically a worker session you spawned, telling you it finished, failed,
 needs an answer, or is ready for review. It reaches you as one line, and the
 line is all you act on. The grammar, the codes and the queue are core's
-(`notify` package, and the README's notification section); this section is
+(the `notify` package — `notify.ParseLine` — and the **Notifications** entry
+of core's `AGENTS.md`); this section is
 what an agent does with them.
 
 **How it arrives.** No per-harness code: two clawee commands are the whole
