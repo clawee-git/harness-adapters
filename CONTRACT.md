@@ -161,9 +161,18 @@ clawee-notify v0 01JABCDEFGHJKMNPQRSTVWXYZ0 review from=njc@masdetta-ci/0a1b2c3d
 ```
 
 `<id>` is a ULID; `<code>` is one of the eight below; `<from>` is the
-reporting session, or for `answered` the poster, as `<user>@<gateway>/<sid8>`,
-written by claweed and never by the reporting or posting program; sid8
-`00000000` means the poster was outside any session; `<ref>`, when present, is a project id or
+reporting session, or for `answered` the poster, written by claweed and never
+by the reporting or posting program.
+
+**The sender.** `<from>` is `<key label>@<box>/<sid8>`. The box fingerprint
+is the box's unique identity; the box name is only its label, and claweed is
+the source: the gateway holds the mapping and every CLI receives it synced.
+`<box>` is that name, or the host name while the gateway is older and sends no
+box name. `<key label>` is the account the key is labelled with, `key_<8 hex>`
+for an unlabelled key. sid8 `00000000` means the poster was outside any
+session.
+
+`<ref>`, when present, is a project id or
 `<project-id>/<NN-feature>`; `<at>` is UTC to the second. Fields are separated
 by single spaces, and none can contain one. The authority for each field is
 core's `notify.ParseLine`; this summary is not.
