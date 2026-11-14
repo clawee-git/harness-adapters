@@ -164,9 +164,10 @@ clawee-notify v0 01JABCDEFGHJKMNPQRSTVWXYZ0 review from=njc@masdetta-ci/0a1b2c3d
 reporting session, or for `answered` the poster, written by claweed and never
 by the reporting or posting program.
 
-**The sender.** `<from>` is `<key label>@<box>/<sid8>`. The box fingerprint
-is the box's unique identity; the box name is only its label, and claweed is
-the source: the gateway holds the mapping and every CLI receives it synced.
+**The sender.** `<from>` is `<key label>@<box>/<sid8>`. The burrowee gateway
+fingerprint is the box's unique identity; the box name is only its label, and
+claweed is the source: it stores the fingerprint to name mapping from the
+gateway's Register identity reply, and every CLI syncs it from claweed.
 `<box>` is that name, or the host name while the gateway is older and sends no
 box name. `<key label>` is the account the key is labelled with, `key_<8 hex>`
 for an unlabelled key. sid8 `00000000` means the poster was outside any
