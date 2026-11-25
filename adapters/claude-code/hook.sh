@@ -8,6 +8,11 @@ command -v "$clawee" >/dev/null 2>&1 || exit 0
 kind=""
 text=""
 case "$event" in
+  UserPromptSubmit)
+    frames="$("$clawee" message inbox --pending --format prompt 2>/dev/null)" || exit 0
+    [ -z "$frames" ] || printf '%s\n' "$frames"
+    exit 0
+    ;;
   Stop)
     kind="done"
     ;;

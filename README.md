@@ -24,10 +24,16 @@ Code from v2.1.295) needs no adapter: clawee's holder reads the report from
 the session's output, and it outranks any hook. Adapters are the fallback for
 harnesses that do not emit it (`CONTRACT.md` §0).
 
-**Notifications need no adapter either.** A session you spawned reports
-`done`, `error`, `blocked.*`, `review` or `gate`, and another process can post
-`answered` with `clawee notify push`, as one fixed `clawee-notify v0` line,
-delivered by `clawee notify follow` and `clawee notify watch`; what an agent does with each code is `CONTRACT.md` §6.
+**Messages reach a model through MCP.** `clawee mcp` is one stdio MCP server
+for any MCP harness (Claude Code, Grok, Codex); a turn hook running
+`clawee message inbox --pending --format prompt` is the optional backup. A
+harness in a person's session sends as the person only when they confirmed
+it or handed the message over (`CONTRACT.md` §5).
+
+**Notifications need no adapter.** claweed broadcasts status on topics
+(`session.state`, `harness.state`, `project.state`, …); a subscriber runs
+`clawee notify watch <topic>` and decides what to do. What an agent does with
+each state is `CONTRACT.md` §6.
 
 Adapters live here, one directory per harness under `adapters/`. The contract
 they implement is `CONTRACT.md`; how to add one is `CONTRIBUTING.md`. The
@@ -44,9 +50,11 @@ git clone https://github.com/clawee-git/harness-adapters.git
 harness-adapters/adapters/claude-code/install.sh
 ```
 
-The installer merges two hooks into `~/.claude/settings.json` (a backup is
-kept beside it) and does nothing else. `uninstall.sh` removes exactly those
-two. Run `adapters/claude-code/smoke_test.sh` to see the adapter drive a fake
+The installer merges three hooks (`Notification`, `Stop`, `UserPromptSubmit`)
+into `~/.claude/settings.json` (a backup is kept beside it) and registers the
+MCP server with `claude mcp add --scope user clawee -- clawee mcp`.
+`uninstall.sh` removes exactly those three hooks, and the MCP server only when
+the installer added it. Run `adapters/claude-code/smoke_test.sh` to see the adapter drive a fake
 `clawee` with the argv it would send.
 
 ## Requirements
@@ -55,6 +63,8 @@ two. Run `adapters/claude-code/smoke_test.sh` to see the adapter drive a fake
   installed on the gateway host, paired to its local claweed.
 - claweed ≥ 0.3.3 on that host (it exports `CLAWEE_SID` into every session's
   shell and serves `session.signal`).
+- For messages: a clawee cli with `clawee mcp` and `clawee message`, and a
+  claweed that serves them (the harness-mode release).
 
 ## Licence
 
