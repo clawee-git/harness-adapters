@@ -56,10 +56,13 @@ hooks.
 The MCP server is registered with `claude mcp add --scope user clawee --
 clawee mcp`, since Claude Code does not read user-scope MCP servers from
 `settings.json`. When that succeeds, `install.sh` writes
-`<settings>.clawee-mcp`; a re-run with the marker present does not add it
-again. `uninstall.sh` runs `claude mcp remove --scope user clawee` only when
-the marker is there, then deletes it, so a `clawee` server you registered
-yourself is left alone. With no `claude` on `PATH` (`CLAUDE_BIN` overrides
+`<settings>.clawee-mcp`. Both scripts check the marker against
+`claude mcp get clawee`: a re-run with the marker and the server present adds
+nothing, and one whose server was removed by hand registers it again.
+`uninstall.sh` runs `claude mcp remove --scope user clawee` only when the
+marker is there and the server still is; a server already gone just loses its
+marker ("already removed"). A `clawee` server you registered yourself has no
+marker and is left alone. With no `claude` on `PATH` (`CLAUDE_BIN` overrides
 it) the installer adds the hooks and prints the command to run.
 
 ## How it works

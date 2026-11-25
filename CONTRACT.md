@@ -149,12 +149,15 @@ scope, as the server named `clawee` running `clawee mcp`:
 | harness | register | remove |
 |---|---|---|
 | Claude Code | `claude mcp add --scope user clawee -- clawee mcp` | `claude mcp remove --scope user clawee` |
-| Grok | its user MCP config: a stdio server `clawee`, command `clawee`, args `["mcp"]` | delete that entry |
-| Codex | `codex mcp add clawee -- clawee mcp` (an `[mcp_servers.clawee]` table in `~/.codex/config.toml`) | `codex mcp remove clawee` |
+| Grok (the xAI Grok CLI) | `grok mcp add clawee -- clawee mcp` (an `[mcp_servers.clawee]` table in `~/.grok/config.toml`) | `grok mcp remove clawee` |
+| Codex | `codex mcp add clawee -- clawee mcp` (an `[mcp_servers.clawee]` table in `~/.codex/config.toml`) | `codex mcp remove clawee` (unconfirmed: not in Codex's MCP docs; see `codex mcp --help`) |
 
 Claude Code does not read user-scope MCP servers from `~/.claude/settings.json`,
 so a settings merge cannot register it; use the cli. An adapter's uninstall
-removes the server only when its install added it. `clawee mcp` exits 1
+removes the server only when its install added it. Install and uninstall check the harness's
+real registration (`claude mcp get clawee` for Claude Code) rather than its own record: a
+server removed by hand is registered again by the next install, and an
+uninstall finding it gone only forgets it. `clawee mcp` exits 1
 before reading stdin outside a clawee session or harness, so a harness used
 outside clawee sees one failed server, nothing else. Its tools, and which of
 them a person's session leaves out, are the cli's (`clawee mcp --help`).

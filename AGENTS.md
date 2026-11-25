@@ -27,7 +27,8 @@
   three hooks into `~/.claude/settings.json` with a `.clawee-bak` backup and
   runs `claude mcp add --scope user clawee -- clawee mcp`, leaving a
   `<settings>.clawee-mcp` marker; `uninstall.sh` removes exactly those hooks,
-  and the server only when the marker says install added it).
+  and the server only when the marker says install added it and
+  `claude mcp get clawee` finds it).
   `tools/fake-claude.sh` stands in for `claude` in the smoke test: argv to
   `$FAKE_CLAUDE_LOG`, a user-scope MCP list in `$FAKE_CLAUDE_MCP`.
   `fake-clawee.sh` prints `$FAKE_CLAWEE_STDOUT` and exits `$FAKE_CLAWEE_EXIT`
