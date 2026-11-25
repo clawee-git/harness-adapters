@@ -24,10 +24,10 @@ print(f"clawee hooks installed into {path}")
 PY
 claude="${CLAUDE_BIN:-claude}"
 marker="$settings.clawee-mcp"
-if [ -f "$marker" ]; then
-  echo "clawee MCP server already registered by this adapter"
-elif ! command -v "$claude" >/dev/null 2>&1; then
+if ! command -v "$claude" >/dev/null 2>&1; then
   echo "claude not found: clawee MCP server not registered (run: claude mcp add --scope user clawee -- clawee mcp)"
+elif [ -f "$marker" ] && "$claude" mcp get clawee >/dev/null 2>&1; then
+  echo "clawee MCP server already registered by this adapter"
 elif "$claude" mcp add --scope user clawee -- clawee mcp >/dev/null 2>&1; then
   printf 'claude mcp add --scope user clawee -- clawee mcp\n' > "$marker"
   echo "clawee MCP server registered for Claude Code (user scope)"

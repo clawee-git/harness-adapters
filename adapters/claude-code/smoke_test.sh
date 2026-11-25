@@ -73,7 +73,7 @@ for ev in sys.argv[3].split():
     cmds = [h["command"] for e in cfg["hooks"][ev] for h in e["hooks"]]
     assert cmds == [f"{d}/hook.sh {ev}"], cmds
 PY
-[ "$(cat "$FAKE_CLAUDE_LOG")" = "$mcp_add" ] || { cat "$FAKE_CLAUDE_LOG" >&2; fail "install did not register the MCP server exactly once"; }
+[ "$(grep -v '^mcp get ' "$FAKE_CLAUDE_LOG")" = "$mcp_add" ] || { cat "$FAKE_CLAUDE_LOG" >&2; fail "install did not register the MCP server exactly once"; }
 [ "$(cat "$FAKE_CLAUDE_MCP")" = "clawee" ] || fail "MCP server not registered"
 sh "$here/uninstall.sh" >/dev/null || fail "uninstall exited non-zero"
 sh "$here/uninstall.sh" >/dev/null || fail "second uninstall exited non-zero"
@@ -81,9 +81,27 @@ python3 - "$CLAUDE_SETTINGS" "$tmp/original.json" <<'PY' || fail "uninstall did 
 import json, sys
 assert json.load(open(sys.argv[1])) == json.load(open(sys.argv[2]))
 PY
-[ "$(cat "$FAKE_CLAUDE_LOG")" = "$mcp_add
+[ "$(grep -v '^mcp get ' "$FAKE_CLAUDE_LOG")" = "$mcp_add
 $mcp_remove" ] || { cat "$FAKE_CLAUDE_LOG" >&2; fail "uninstall did not remove the MCP server exactly once"; }
 [ ! -s "$FAKE_CLAUDE_MCP" ] || fail "uninstall left the MCP server registered"
+
+: > "$FAKE_CLAUDE_LOG"
+sh "$here/install.sh" >/dev/null || fail "install exited non-zero"
+: > "$FAKE_CLAUDE_MCP"
+sh "$here/install.sh" >/dev/null || fail "install after a manual remove exited non-zero"
+[ "$(cat "$FAKE_CLAUDE_MCP")" = "clawee" ] || fail "install did not re-register a server removed by hand"
+[ "$(grep -c "^$mcp_add\$" "$FAKE_CLAUDE_LOG")" = 2 ] || { cat "$FAKE_CLAUDE_LOG" >&2; fail "install did not add the server again after a manual remove"; }
+: > "$FAKE_CLAUDE_MCP"
+: > "$FAKE_CLAUDE_LOG"
+out="$(sh "$here/uninstall.sh")" || fail "uninstall after a manual remove exited non-zero"
+[ ! -f "$CLAUDE_SETTINGS.clawee-mcp" ] || fail "uninstall kept the marker of a server removed by hand"
+case "$out" in *"mcp remove"*) fail "uninstall printed a remove command with nothing to remove: $out" ;; esac
+case "$out" in *"already removed"*) ;; *) fail "uninstall did not say the server was already removed: $out" ;; esac
+! grep -q '^mcp remove ' "$FAKE_CLAUDE_LOG" || fail "uninstall ran mcp remove for a server already gone"
+python3 - "$CLAUDE_SETTINGS" "$tmp/original.json" <<'PY' || fail "uninstall after a manual remove did not restore the settings"
+import json, sys
+assert json.load(open(sys.argv[1])) == json.load(open(sys.argv[2]))
+PY
 
 cat > "$CLAUDE_SETTINGS" <<'JSON'
 {"model": "opus", "hooks": {"Notification": [{"hooks": [{"type": "command", "command": "/opt/mine notify"}]}], "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "/opt/mine stop"}]}]}}

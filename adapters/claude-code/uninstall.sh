@@ -4,13 +4,18 @@ dir="$(cd "$(dirname "$0")" && pwd)"
 settings="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
 claude="${CLAUDE_BIN:-claude}"
 marker="$settings.clawee-mcp"
-if [ -f "$marker" ]; then
-  if command -v "$claude" >/dev/null 2>&1 && "$claude" mcp remove --scope user clawee >/dev/null 2>&1; then
-    rm -f "$marker"
-    echo "clawee MCP server removed from Claude Code"
-  else
-    echo "clawee MCP server not removed: run claude mcp remove --scope user clawee"
-  fi
+if [ ! -f "$marker" ]; then
+  :
+elif ! command -v "$claude" >/dev/null 2>&1; then
+  echo "claude not found: clawee MCP server left registered"
+elif ! "$claude" mcp get clawee >/dev/null 2>&1; then
+  rm -f "$marker"
+  echo "clawee MCP server already removed from Claude Code"
+elif "$claude" mcp remove --scope user clawee >/dev/null 2>&1; then
+  rm -f "$marker"
+  echo "clawee MCP server removed from Claude Code"
+else
+  echo "clawee MCP server not removed: claude mcp remove --scope user clawee failed"
 fi
 [ -f "$settings" ] || exit 0
 python3 - "$settings" "$dir" <<'PY'
