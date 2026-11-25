@@ -13,6 +13,13 @@
           { "type": "command", "command": "__ADAPTER_DIR__/hook.sh Stop" }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "__ADAPTER_DIR__/hook.sh UserPromptSubmit" }
+        ]
+      }
     ]
   }
 }
