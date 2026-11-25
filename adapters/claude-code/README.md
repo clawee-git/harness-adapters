@@ -25,6 +25,13 @@ and it sends `clear` itself on exit.
 | `Notification` | any other type (`idle_prompt`, a question) | `question` | the notification message |
 | `Stop` | — | `done` | — |
 
+**Messages.** `UserPromptSubmit` runs `clawee message inbox --pending --format
+prompt` and prints its output, which Claude Code adds to the turn's context:
+this terminal's pending messages in clawee's fixed frame, or nothing. The main
+path is the MCP server `clawee mcp`, which `install.sh` registers
+(`CONTRACT.md` §5). Both need a clawee cli with `message` and `mcp`; an older
+cli prints nothing and the hook still exits 0.
+
 Minimum clawee cli: the session-viewers release (`clawee sessions signal`).
 The host's claweed must be ≥ 0.3.3 (exports `CLAWEE_SID`).
 
@@ -33,8 +40,8 @@ The host's claweed must be ≥ 0.3.3 (exports `CLAWEE_SID`).
 On the gateway host (where Claude Code runs inside a clawee session):
 
 ```
-adapters/claude-code/install.sh      # merges two hooks into ~/.claude/settings.json
-adapters/claude-code/uninstall.sh    # removes exactly those two
+adapters/claude-code/install.sh      # merges three hooks into ~/.claude/settings.json, registers clawee mcp
+adapters/claude-code/uninstall.sh    # removes exactly what install added
 ```
 
 `CLAUDE_SETTINGS=<path>` points both at another settings file. The hook
@@ -43,14 +50,26 @@ checkout and re-run `install.sh`.
 
 `install.sh` is idempotent: a hook already present is not added twice. On its
 first run it copies the settings file to `<settings>.clawee-bak` beside it
-and never overwrites that backup. It touches nothing in the file but the two
+and never overwrites that backup. It touches nothing in the file but the three
 hooks.
+
+The MCP server is registered with `claude mcp add --scope user clawee --
+clawee mcp`, since Claude Code does not read user-scope MCP servers from
+`settings.json`. When that succeeds, `install.sh` writes
+`<settings>.clawee-mcp`. Both scripts check the marker against
+`claude mcp get clawee`: a re-run with the marker and the server present adds
+nothing, and one whose server was removed by hand registers it again.
+`uninstall.sh` runs `claude mcp remove --scope user clawee` only when the
+marker is there and the server still is; a server already gone just loses its
+marker ("already removed"). A `clawee` server you registered yourself has no
+marker and is left alone. With no `claude` on `PATH` (`CLAUDE_BIN` overrides
+it) the installer adds the hooks and prints the command to run.
 
 ## How it works
 
 Claude Code runs `hook.sh <event>` as a hook, with `<event>` one of
-`Notification` or `Stop` (`settings.snippet.json`); any other event sends
-nothing. The hook reads the event JSON on stdin, picks the kind from the
+`Notification`, `Stop` or `UserPromptSubmit` (`settings.snippet.json`); any
+other event sends nothing. The hook reads the event JSON on stdin, picks the kind from the
 table, and runs `clawee sessions signal "/$CLAWEE_SID" <kind> [text]`: one
 signal per event. It exits 0 always: outside a clawee session (`CLAWEE_SID`,
 which claweed sets in every session's shell, is unset), with no `clawee` on
@@ -67,5 +86,7 @@ parser every gateway host has. A missing or malformed payload still signals a
 adapters/claude-code/smoke_test.sh
 ```
 
-runs the hook against `tools/fake-clawee.sh`, asserts the recorded argv for
-each event, and round-trips install/uninstall on a scratch settings file.
+runs the hook against `tools/fake-clawee.sh`, asserts the recorded argv and
+the turn hook's output for each event, and round-trips install/uninstall
+against `tools/fake-claude.sh` on a scratch settings file and `HOME`: twice
+each, over pre-existing hooks, and over a `clawee` server it did not add.

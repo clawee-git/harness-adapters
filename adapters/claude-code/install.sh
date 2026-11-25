@@ -11,7 +11,7 @@ path, adir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     cfg = json.load(f) or {}
 hooks = cfg.setdefault("hooks", {})
-for event in ("Notification", "Stop"):
+for event in ("Notification", "Stop", "UserPromptSubmit"):
     cmd = f"{adir}/hook.sh {event}"
     entries = hooks.setdefault(event, [])
     present = any(h.get("command") == cmd for e in entries for h in e.get("hooks", []))
@@ -22,3 +22,15 @@ with open(path, "w") as f:
     f.write("\n")
 print(f"clawee hooks installed into {path}")
 PY
+claude="${CLAUDE_BIN:-claude}"
+marker="$settings.clawee-mcp"
+if ! command -v "$claude" >/dev/null 2>&1; then
+  echo "claude not found: clawee MCP server not registered (run: claude mcp add --scope user clawee -- clawee mcp)"
+elif [ -f "$marker" ] && "$claude" mcp get clawee >/dev/null 2>&1; then
+  echo "clawee MCP server already registered by this adapter"
+elif "$claude" mcp add --scope user clawee -- clawee mcp >/dev/null 2>&1; then
+  printf 'claude mcp add --scope user clawee -- clawee mcp\n' > "$marker"
+  echo "clawee MCP server registered for Claude Code (user scope)"
+else
+  echo "clawee MCP server not registered: claude mcp add failed (one named clawee may exist already)"
+fi

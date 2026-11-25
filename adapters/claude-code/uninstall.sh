@@ -2,6 +2,21 @@
 set -eu
 dir="$(cd "$(dirname "$0")" && pwd)"
 settings="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
+claude="${CLAUDE_BIN:-claude}"
+marker="$settings.clawee-mcp"
+if [ ! -f "$marker" ]; then
+  :
+elif ! command -v "$claude" >/dev/null 2>&1; then
+  echo "claude not found: clawee MCP server left registered"
+elif ! "$claude" mcp get clawee >/dev/null 2>&1; then
+  rm -f "$marker"
+  echo "clawee MCP server already removed from Claude Code"
+elif "$claude" mcp remove --scope user clawee >/dev/null 2>&1; then
+  rm -f "$marker"
+  echo "clawee MCP server removed from Claude Code"
+else
+  echo "clawee MCP server not removed: claude mcp remove --scope user clawee failed"
+fi
 [ -f "$settings" ] || exit 0
 python3 - "$settings" "$dir" <<'PY'
 import json, sys
@@ -9,7 +24,7 @@ path, adir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     cfg = json.load(f) or {}
 hooks = cfg.get("hooks", {})
-for event in ("Notification", "Stop"):
+for event in ("Notification", "Stop", "UserPromptSubmit"):
     cmd = f"{adir}/hook.sh {event}"
     kept = []
     for e in hooks.get(event, []):
