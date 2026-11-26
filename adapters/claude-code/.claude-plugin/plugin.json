@@ -1,0 +1,12 @@
+{
+  "name": "clawee",
+  "version": "0.1.0",
+  "description": "clawee for Claude Code: attention signals, the turn hook, the harness session report and the clawee MCP server",
+  "author": {
+    "name": "clawee-git"
+  },
+  "license": "MIT",
+  "network": {
+    "hosts": []
+  }
+}

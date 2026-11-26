@@ -271,6 +271,33 @@ each field is core's `notify.ParseLine`. A line whose major version is above
   under the operator's rules for that session (§4); a harness takes messages
   only.
 
+## 8. Reporting the harness session
+
+So claweed can bring a harness's conversation back after a crash, an adapter
+reports which conversation is running from the harness's start hook:
+
+```
+clawee sessions harness /$CLAWEE_SID <harness> <session-id> --start-dir <dir> [--transcript <path>]
+clawee sessions harness /$CLAWEE_SID <harness> --clear
+```
+
+- `<harness>` is exactly `claude-code`, `codex` or `grok`; claweed resumes only
+  these, and any other name falls back to the recorded command line.
+- `<dir>` is the directory the harness keys the conversation by, absolute,
+  never the hook's working directory: Claude Code `CLAUDE_PROJECT_DIR`, Codex
+  and Grok the start event's `cwd`. No start directory, no report.
+- `--transcript` only when the event carries a non-empty path.
+- `--clear` only where the harness reports a deliberate end; a harness that
+  cannot report one never clears.
+- The verb exits 0 on success, 1 on a chain failure, 2 on a usage error; the
+  hook, as every hook here, exits 0 whatever happens.
+
+| adapter | start | clear on | installs into |
+|---|---|---|---|
+| `adapters/claude-code` | `SessionStart`, every source; silent under Grok (`GROK_HOOK_EVENT`) | `SessionEnd` `prompt_input_exit`, `logout` | the `clawee@harness-adapters` plugin, or `~/.claude/settings.json` by `install.sh` |
+| `adapters/codex` | `SessionStart`, every source | never (0.172.0's reason is always `other`) | `$CODEX_HOME/hooks.json`, approved in `/hooks` |
+| `adapters/grok` | `SessionStart`, `new` and `load`; `subagentType` ignored | only reasons proven on Grok; none yet | `${GROK_HOME:-~/.grok}/hooks/clawee.json` |
+
 ## 7. Versioning
 
 - This contract is versioned with the clawee release it ships in; a change

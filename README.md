@@ -50,11 +50,16 @@ git clone https://github.com/clawee-git/harness-adapters.git
 harness-adapters/adapters/claude-code/install.sh
 ```
 
-The installer merges three hooks (`Notification`, `Stop`, `UserPromptSubmit`)
-into `~/.claude/settings.json` (a backup is kept beside it) and registers the
-MCP server with `claude mcp add --scope user clawee -- clawee mcp`.
-`uninstall.sh` removes exactly those three hooks, and the MCP server only when
-the installer added it. Run `adapters/claude-code/smoke_test.sh` to see the adapter drive a fake
+The preferred path is the Claude Code plugin: this repo is its marketplace
+(`claude plugin marketplace add clawee-git/harness-adapters`, then `claude
+plugin install clawee@harness-adapters`). The fallback installer merges five
+hooks (`Notification`, `Stop`, `UserPromptSubmit`, `SessionStart`,
+`SessionEnd`) into `~/.claude/settings.json` (a backup is kept beside it) and
+registers the MCP server with `claude mcp add --scope user clawee -- clawee mcp`.
+`uninstall.sh` removes exactly those five hooks, and the MCP server only when
+the installer added it; use one path, not both (`adapters/claude-code/README.md`).
+Codex and Grok report their conversation for crash resume through
+`adapters/codex/` and `adapters/grok/` (`CONTRACT.md` §8). Run `adapters/claude-code/smoke_test.sh` to see the adapter drive a fake
 `clawee` with the argv it would send.
 
 ## Requirements

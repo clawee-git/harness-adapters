@@ -23,14 +23,19 @@
   No daemon, no network. No GitHub Actions — the reviewer runs it.
 - Reference adapter: `adapters/claude-code/` (`Notification` → `permission` /
   `question`, `Stop` → `done`, `UserPromptSubmit` → the turn hook
-  `clawee message inbox --pending --format prompt`; `install.sh` merges those
-  three hooks into `~/.claude/settings.json` with a `.clawee-bak` backup and
+  `clawee message inbox --pending --format prompt`, `SessionStart` /
+  `SessionEnd` → `clawee sessions harness` (`CONTRACT.md` §8); it ships as the
+  plugin `clawee@harness-adapters` (`.claude-plugin/marketplace.json` at the
+  root), and its `install.sh` fallback merges those
+  five hooks into `~/.claude/settings.json` with a `.clawee-bak` backup and
   runs `claude mcp add --scope user clawee -- clawee mcp`, leaving a
   `<settings>.clawee-mcp` marker; `uninstall.sh` removes exactly those hooks,
   and the server only when the marker says install added it and
   `claude mcp get clawee` finds it).
   `tools/fake-claude.sh` stands in for `claude` in the smoke test: argv to
   `$FAKE_CLAUDE_LOG`, a user-scope MCP list in `$FAKE_CLAUDE_MCP`.
+  `adapters/codex/` and `adapters/grok/` report the harness session the same
+  way, into `$CODEX_HOME/hooks.json` and `~/.grok/hooks/clawee.json`.
   `fake-clawee.sh` prints `$FAKE_CLAWEE_STDOUT` and exits `$FAKE_CLAWEE_EXIT`
   when set. `adapters/example/` is the template
   (`CONTRIBUTING.md`).

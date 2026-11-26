@@ -2,7 +2,7 @@
 set -eu
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
-tmp="$(mktemp -d)"
+tmp="$(cd "$(mktemp -d)" && pwd -P)"
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin"
 cp "$root/tools/fake-clawee.sh" "$tmp/bin/clawee"
@@ -54,7 +54,67 @@ out="$(env -u CLAWEE_SID sh "$here/hook.sh" UserPromptSubmit </dev/null)" || fai
 [ -z "$out" ] && [ ! -s "$FAKE_CLAWEE_LOG" ] || fail "turn hook ran outside a session"
 unset FAKE_CLAWEE_STDOUT
 
-events='Notification Stop UserPromptSubmit'
+mkdir -p "$tmp/proj/sub" "$tmp/elsewhere"
+sess=9b2f0c1e-4d3a-4f6b-8c7d-0123456789ab
+tr="$HOME/.claude/projects/-proj/$sess.jsonl"
+start_event() { printf '{"session_id":"%s","transcript_path":"%s","cwd":"%s","hook_event_name":"SessionStart","source":"%s"}' "$sess" "$tr" "$tmp/proj/sub" "$1"; }
+end_event() { printf '{"session_id":"%s","transcript_path":"%s","cwd":"%s","hook_event_name":"SessionEnd","reason":"%s"}' "$sess" "$tr" "$tmp/proj/sub" "$1"; }
+report="sessions harness /$CLAWEE_SID claude-code $sess --start-dir $tmp/proj --transcript $tr"
+clear="sessions harness /$CLAWEE_SID claude-code --clear"
+: > "$FAKE_CLAWEE_LOG"
+for src in startup resume clear compact fork; do
+  (cd "$tmp/proj/sub" && start_event "$src" | CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart) || fail "SessionStart $src exited non-zero"
+done
+for reason in prompt_input_exit logout clear resume other; do
+  (cd "$tmp/elsewhere" && end_event "$reason" | CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionEnd) || fail "SessionEnd $reason exited non-zero"
+done
+want="$report
+$report
+$report
+$report
+$report
+$clear
+$clear"
+got="$(cat "$FAKE_CLAWEE_LOG")"
+[ "$got" = "$want" ] || { printf 'argv log:\n%s\nwant:\n%s\n' "$got" "$want" >&2; fail "session report argv mismatch"; }
+
+: > "$FAKE_CLAWEE_LOG"
+(cd "$tmp/proj" && start_event startup | CLAUDE_PROJECT_DIR=sub sh "$here/hook.sh" SessionStart) || fail "relative start dir exited non-zero"
+[ "$(cat "$FAKE_CLAWEE_LOG")" = "sessions harness /$CLAWEE_SID claude-code $sess --start-dir $tmp/proj/sub --transcript $tr" ] || fail "relative CLAUDE_PROJECT_DIR not made absolute: $(cat "$FAKE_CLAWEE_LOG")"
+
+: > "$FAKE_CLAWEE_LOG"
+(cd "$tmp/proj" && start_event startup | env -u CLAUDE_PROJECT_DIR sh "$here/hook.sh" SessionStart) || fail "no start dir exited non-zero"
+start_event startup | env -u CLAWEE_SID CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "no CLAWEE_SID exited non-zero"
+printf 'not json' | CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "non-JSON start exited non-zero"
+printf 'not json' | sh "$here/hook.sh" SessionEnd || fail "non-JSON end exited non-zero"
+printf '{"session_id":"-rf","source":"startup"}' | CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "option-shaped id exited non-zero"
+printf '{"source":"startup"}' | CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "no session id exited non-zero"
+start_event startup | GROK_HOOK_EVENT=session_start CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "SessionStart under Grok exited non-zero"
+end_event logout | GROK_HOOK_EVENT=session_end sh "$here/hook.sh" SessionEnd || fail "SessionEnd under Grok exited non-zero"
+[ ! -s "$FAKE_CLAWEE_LOG" ] || fail "hook reported when it must stay silent: $(cat "$FAKE_CLAWEE_LOG")"
+start_event startup | FAKE_CLAWEE_EXIT=2 CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "SessionStart propagated a refused call"
+start_event startup | CLAWEE_BIN="$tmp/no-such-clawee" CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "SessionStart failed without clawee"
+
+mkdir -p "$tmp/slow"
+printf '#!/bin/sh\nsleep 3\nexec clawee "$@"\n' > "$tmp/slow/clawee"
+chmod +x "$tmp/slow/clawee"
+: > "$FAKE_CLAWEE_LOG"
+began="$(date +%s)"
+end_event logout | CLAWEE_BIN="$tmp/slow/clawee" sh "$here/hook.sh" SessionEnd || fail "SessionEnd with a slow clawee exited non-zero"
+took=$(( $(date +%s) - began ))
+[ "$took" -le 1 ] || fail "SessionEnd waited ${took}s for clawee; Claude Code allows 1.5s"
+[ ! -s "$FAKE_CLAWEE_LOG" ] || fail "slow clawee finished before the hook returned"
+n=0
+while [ ! -s "$FAKE_CLAWEE_LOG" ] && [ "$n" -lt 100 ]; do sleep 0.1; n=$((n + 1)); done
+[ "$(cat "$FAKE_CLAWEE_LOG")" = "$clear" ] || fail "detached clear did not land: $(cat "$FAKE_CLAWEE_LOG")"
+
+: > "$FAKE_CLAWEE_LOG"
+printf '{"stop_hook_active":false}' | GROK_HOOK_EVENT=stop sh "$here/hook.sh" Stop
+printf '{"notification_type":"permission_prompt","message":"ok?"}' | GROK_HOOK_EVENT=notification sh "$here/hook.sh" Notification
+[ "$(cat "$FAKE_CLAWEE_LOG")" = "sessions signal /$CLAWEE_SID done
+sessions signal /$CLAWEE_SID permission ok?" ] || fail "GROK_HOOK_EVENT silenced an attention event: $(cat "$FAKE_CLAWEE_LOG")"
+
+events='Notification Stop UserPromptSubmit SessionStart SessionEnd'
 mcp_add="mcp add --scope user clawee -- clawee mcp"
 mcp_remove="mcp remove --scope user clawee"
 
@@ -115,7 +175,7 @@ python3 - "$CLAUDE_SETTINGS" "$here" <<'PY' || fail "install over existing hooks
 import json, sys
 cfg = json.load(open(sys.argv[1])); d = sys.argv[2]
 assert cfg["model"] == "opus"
-want = {"Notification": ["/opt/mine notify"], "Stop": ["/opt/mine stop"], "UserPromptSubmit": []}
+want = {"Notification": ["/opt/mine notify"], "Stop": ["/opt/mine stop"], "UserPromptSubmit": [], "SessionStart": [], "SessionEnd": []}
 for ev, mine in want.items():
     cmds = [h["command"] for e in cfg["hooks"][ev] for h in e["hooks"]]
     assert cmds == mine + [f"{d}/hook.sh {ev}"], (ev, cmds)
@@ -133,7 +193,65 @@ printf '{}\n' > "$CLAUDE_SETTINGS"
 CLAUDE_BIN="$tmp/no-such-claude" sh "$here/install.sh" >/dev/null 2>&1 || fail "install failed without claude"
 python3 - "$CLAUDE_SETTINGS" <<'PY' || fail "install without claude did not add the hooks"
 import json, sys
-assert len(json.load(open(sys.argv[1]))["hooks"]) == 3
+assert len(json.load(open(sys.argv[1]))["hooks"]) == 5
 PY
 CLAUDE_BIN="$tmp/no-such-claude" sh "$here/uninstall.sh" >/dev/null 2>&1 || fail "uninstall failed without claude"
+
+printf '{"enabledPlugins":{"clawee@harness-adapters":true}}\n' > "$CLAUDE_SETTINGS"
+cp "$CLAUDE_SETTINGS" "$tmp/original.json"
+: > "$FAKE_CLAUDE_LOG"
+if out="$(sh "$here/install.sh" 2>&1)"; then fail "install ran while the clawee plugin is enabled"; fi
+case "$out" in *"clawee@harness-adapters"*) ;; *) fail "install refusal did not name the plugin: $out" ;; esac
+cmp -s "$CLAUDE_SETTINGS" "$tmp/original.json" || fail "install refusal changed the settings"
+[ ! -s "$FAKE_CLAUDE_LOG" ] || fail "install refusal ran claude: $(cat "$FAKE_CLAUDE_LOG")"
+printf '{}\n' > "$CLAUDE_SETTINGS"
+cp "$CLAUDE_SETTINGS" "$tmp/original.json"
+for f in settings.json settings.local.json; do
+  mkdir -p "$tmp/project/.claude"
+  rm -f "$tmp/project/.claude/"*
+  printf '{"enabledPlugins":{"clawee@harness-adapters":true}}\n' > "$tmp/project/.claude/$f"
+  if out="$(cd "$tmp/project" && sh "$here/install.sh" 2>&1)"; then fail "install ran while the plugin is enabled in .claude/$f"; fi
+  case "$out" in *"clawee@harness-adapters"*) ;; *) fail "project refusal did not name the plugin: $out" ;; esac
+  cmp -s "$CLAUDE_SETTINGS" "$tmp/original.json" || fail "project refusal changed the settings"
+done
+printf '{"enabledPlugins":{"clawee@harness-adapters":false}}\n' > "$CLAUDE_SETTINGS"
+CLAUDE_BIN="$tmp/no-such-claude" sh "$here/install.sh" >/dev/null 2>&1 || fail "install refused a disabled plugin"
+
+python3 - "$root" "$here" "$events" <<'PY2' || fail "plugin manifest, hooks.json or marketplace is wrong"
+import json, os, sys
+root, d, events = sys.argv[1], sys.argv[2], sys.argv[3].split()
+market = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+assert market["name"] == "harness-adapters", market
+entry = [p for p in market["plugins"] if p["name"] == "clawee"]
+assert len(entry) == 1 and os.path.realpath(os.path.join(root, entry[0]["source"])) == os.path.realpath(d), entry
+manifest = json.load(open(os.path.join(d, ".claude-plugin", "plugin.json")))
+assert manifest["name"] == "clawee" and manifest.get("version"), manifest
+hooks = json.load(open(os.path.join(d, "hooks", "hooks.json")))["hooks"]
+assert sorted(hooks) == sorted(events), hooks
+for ev in events:
+    cmds = [h["command"] for e in hooks[ev] for h in e["hooks"]]
+    assert cmds == ['"${CLAUDE_PLUGIN_ROOT}/hook.sh" ' + ev], cmds
+mcp = json.load(open(os.path.join(d, ".mcp.json")))["mcpServers"]
+assert mcp == {"clawee": {"command": "clawee", "args": ["mcp"]}}, mcp
+snippet = json.load(open(os.path.join(d, "settings.snippet.json")))["hooks"]
+assert sorted(snippet) == sorted(events), snippet
+PY2
+spaced="$tmp/with space/claude-code"
+mkdir -p "$tmp/with space"
+cp -R "$here" "$spaced"
+printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"%s/hook.sh Stop"}]}]}}\n' "$spaced" > "$CLAUDE_SETTINGS"
+CLAUDE_BIN="$tmp/no-such-claude" sh "$spaced/install.sh" >/dev/null 2>&1 || fail "install from a folder with a space exited non-zero"
+cmd="$(python3 -c 'import json,sys; print([h["command"] for e in json.load(open(sys.argv[1]))["hooks"]["SessionStart"] for h in e["hooks"]][0])' "$CLAUDE_SETTINGS")"
+: > "$FAKE_CLAWEE_LOG"
+start_event startup | CLAUDE_PROJECT_DIR="$tmp/proj" sh -c "$cmd" || fail "installed command from a folder with a space failed: $cmd"
+[ "$(cat "$FAKE_CLAWEE_LOG")" = "$report" ] || fail "installed command from a folder with a space did not report: $(cat "$FAKE_CLAWEE_LOG")"
+CLAUDE_BIN="$tmp/no-such-claude" sh "$spaced/uninstall.sh" >/dev/null 2>&1 || fail "uninstall from a folder with a space exited non-zero"
+[ "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])))' "$CLAUDE_SETTINGS")" = "{}" ] || fail "uninstall left quoted or legacy hooks: $(cat "$CLAUDE_SETTINGS")"
+
+if [ -n "${CLAUDE_VALIDATE_BIN:-}" ]; then
+  "$CLAUDE_VALIDATE_BIN" plugin validate "$here" >/dev/null || fail "claude plugin validate refused the plugin"
+  "$CLAUDE_VALIDATE_BIN" plugin validate "$root" >/dev/null || fail "claude plugin validate refused the marketplace"
+else
+  echo "claude plugin validate: skipped (set CLAUDE_VALIDATE_BIN to a real claude)"
+fi
 echo "claude-code adapter: ok"
