@@ -5,5 +5,8 @@
   "author": {
     "name": "clawee-git"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "network": {
+    "hosts": []
+  }
 }

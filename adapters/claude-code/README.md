@@ -47,6 +47,11 @@ and `other` (signals included) send nothing. With `GROK_HOOK_EVENT` set (Grok
 runs these hooks too) both events are silent, so Grok is reported once by its
 own adapter; the other three events behave as under Claude Code.
 
+Claude Code 2.1.332 gives `SessionEnd` hooks 1.5 s in all
+(`CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`, raised only by a hook's own
+`timeout`, at most 60 s), so the hook starts the `--clear` call in a session
+of its own, with no stdio, and returns without waiting for it.
+
 ## Plugin (preferred)
 
 This repo is a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`);
@@ -64,7 +69,10 @@ claude plugin uninstall clawee@harness-adapters    # remove
 The two paths exclude each other: `install.sh` refuses, naming the plugin,
 while `clawee@harness-adapters` is enabled in the settings file; nothing stops
 enabling the plugin over an `install.sh` setup, so run `uninstall.sh` first or
-every hook fires twice.
+every hook fires twice. The refusal reads the user settings file and the
+`.claude/settings.json` and `.claude/settings.local.json` of the folder it is
+run in; managed settings and other projects' settings are not read, and the
+installer says so on stderr.
 
 ## Install (fallback)
 
@@ -76,7 +84,8 @@ adapters/claude-code/uninstall.sh    # removes exactly what install added
 ```
 
 `CLAUDE_SETTINGS=<path>` points both at another settings file. The hook
-command is the absolute path of this directory's `hook.sh`, so move the
+command is the absolute path of this directory's `hook.sh`, shell-quoted (an
+unquoted entry from an earlier install is rewritten, and both are removed), so move the
 checkout and re-run `install.sh`.
 
 `install.sh` is idempotent: a hook already present is not added twice. On its

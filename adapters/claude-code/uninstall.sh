@@ -19,16 +19,16 @@ else
 fi
 [ -f "$settings" ] || exit 0
 python3 - "$settings" "$dir" <<'PY'
-import json, sys
+import json, shlex, sys
 path, adir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     cfg = json.load(f) or {}
 hooks = cfg.get("hooks", {})
 for event in ("Notification", "Stop", "UserPromptSubmit", "SessionStart", "SessionEnd"):
-    cmd = f"{adir}/hook.sh {event}"
+    cmds = (f"{shlex.quote(adir + '/hook.sh')} {event}", f"{adir}/hook.sh {event}")
     kept = []
     for e in hooks.get(event, []):
-        e["hooks"] = [h for h in e.get("hooks", []) if h.get("command") != cmd]
+        e["hooks"] = [h for h in e.get("hooks", []) if h.get("command") not in cmds]
         if e["hooks"]:
             kept.append(e)
     if kept:

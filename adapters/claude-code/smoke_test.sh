@@ -95,6 +95,19 @@ end_event logout | GROK_HOOK_EVENT=session_end sh "$here/hook.sh" SessionEnd || 
 start_event startup | FAKE_CLAWEE_EXIT=2 CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "SessionStart propagated a refused call"
 start_event startup | CLAWEE_BIN="$tmp/no-such-clawee" CLAUDE_PROJECT_DIR="$tmp/proj" sh "$here/hook.sh" SessionStart || fail "SessionStart failed without clawee"
 
+mkdir -p "$tmp/slow"
+printf '#!/bin/sh\nsleep 3\nexec clawee "$@"\n' > "$tmp/slow/clawee"
+chmod +x "$tmp/slow/clawee"
+: > "$FAKE_CLAWEE_LOG"
+began="$(date +%s)"
+end_event logout | CLAWEE_BIN="$tmp/slow/clawee" sh "$here/hook.sh" SessionEnd || fail "SessionEnd with a slow clawee exited non-zero"
+took=$(( $(date +%s) - began ))
+[ "$took" -le 1 ] || fail "SessionEnd waited ${took}s for clawee; Claude Code allows 1.5s"
+[ ! -s "$FAKE_CLAWEE_LOG" ] || fail "slow clawee finished before the hook returned"
+n=0
+while [ ! -s "$FAKE_CLAWEE_LOG" ] && [ "$n" -lt 100 ]; do sleep 0.1; n=$((n + 1)); done
+[ "$(cat "$FAKE_CLAWEE_LOG")" = "$clear" ] || fail "detached clear did not land: $(cat "$FAKE_CLAWEE_LOG")"
+
 : > "$FAKE_CLAWEE_LOG"
 printf '{"stop_hook_active":false}' | GROK_HOOK_EVENT=stop sh "$here/hook.sh" Stop
 printf '{"notification_type":"permission_prompt","message":"ok?"}' | GROK_HOOK_EVENT=notification sh "$here/hook.sh" Notification
@@ -191,6 +204,16 @@ if out="$(sh "$here/install.sh" 2>&1)"; then fail "install ran while the clawee 
 case "$out" in *"clawee@harness-adapters"*) ;; *) fail "install refusal did not name the plugin: $out" ;; esac
 cmp -s "$CLAUDE_SETTINGS" "$tmp/original.json" || fail "install refusal changed the settings"
 [ ! -s "$FAKE_CLAUDE_LOG" ] || fail "install refusal ran claude: $(cat "$FAKE_CLAUDE_LOG")"
+printf '{}\n' > "$CLAUDE_SETTINGS"
+cp "$CLAUDE_SETTINGS" "$tmp/original.json"
+for f in settings.json settings.local.json; do
+  mkdir -p "$tmp/project/.claude"
+  rm -f "$tmp/project/.claude/"*
+  printf '{"enabledPlugins":{"clawee@harness-adapters":true}}\n' > "$tmp/project/.claude/$f"
+  if out="$(cd "$tmp/project" && sh "$here/install.sh" 2>&1)"; then fail "install ran while the plugin is enabled in .claude/$f"; fi
+  case "$out" in *"clawee@harness-adapters"*) ;; *) fail "project refusal did not name the plugin: $out" ;; esac
+  cmp -s "$CLAUDE_SETTINGS" "$tmp/original.json" || fail "project refusal changed the settings"
+done
 printf '{"enabledPlugins":{"clawee@harness-adapters":false}}\n' > "$CLAUDE_SETTINGS"
 CLAUDE_BIN="$tmp/no-such-claude" sh "$here/install.sh" >/dev/null 2>&1 || fail "install refused a disabled plugin"
 
@@ -207,12 +230,24 @@ hooks = json.load(open(os.path.join(d, "hooks", "hooks.json")))["hooks"]
 assert sorted(hooks) == sorted(events), hooks
 for ev in events:
     cmds = [h["command"] for e in hooks[ev] for h in e["hooks"]]
-    assert cmds == ["${CLAUDE_PLUGIN_ROOT}/hook.sh " + ev], cmds
+    assert cmds == ['"${CLAUDE_PLUGIN_ROOT}/hook.sh" ' + ev], cmds
 mcp = json.load(open(os.path.join(d, ".mcp.json")))["mcpServers"]
 assert mcp == {"clawee": {"command": "clawee", "args": ["mcp"]}}, mcp
 snippet = json.load(open(os.path.join(d, "settings.snippet.json")))["hooks"]
 assert sorted(snippet) == sorted(events), snippet
 PY2
+spaced="$tmp/with space/claude-code"
+mkdir -p "$tmp/with space"
+cp -R "$here" "$spaced"
+printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"%s/hook.sh Stop"}]}]}}\n' "$spaced" > "$CLAUDE_SETTINGS"
+CLAUDE_BIN="$tmp/no-such-claude" sh "$spaced/install.sh" >/dev/null 2>&1 || fail "install from a folder with a space exited non-zero"
+cmd="$(python3 -c 'import json,sys; print([h["command"] for e in json.load(open(sys.argv[1]))["hooks"]["SessionStart"] for h in e["hooks"]][0])' "$CLAUDE_SETTINGS")"
+: > "$FAKE_CLAWEE_LOG"
+start_event startup | CLAUDE_PROJECT_DIR="$tmp/proj" sh -c "$cmd" || fail "installed command from a folder with a space failed: $cmd"
+[ "$(cat "$FAKE_CLAWEE_LOG")" = "$report" ] || fail "installed command from a folder with a space did not report: $(cat "$FAKE_CLAWEE_LOG")"
+CLAUDE_BIN="$tmp/no-such-claude" sh "$spaced/uninstall.sh" >/dev/null 2>&1 || fail "uninstall from a folder with a space exited non-zero"
+[ "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])))' "$CLAUDE_SETTINGS")" = "{}" ] || fail "uninstall left quoted or legacy hooks: $(cat "$CLAUDE_SETTINGS")"
+
 if [ -n "${CLAUDE_VALIDATE_BIN:-}" ]; then
   "$CLAUDE_VALIDATE_BIN" plugin validate "$here" >/dev/null || fail "claude plugin validate refused the plugin"
   "$CLAUDE_VALIDATE_BIN" plugin validate "$root" >/dev/null || fail "claude plugin validate refused the marketplace"

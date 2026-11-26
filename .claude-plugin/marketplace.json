@@ -9,5 +9,6 @@
       "source": "./adapters/claude-code",
       "description": "clawee for Claude Code: attention signals, the turn hook, the harness session report and the clawee MCP server"
     }
-  ]
+  ],
+  "description": "clawee adapters for coding harnesses: attention signals, the turn hook, the harness session report and the clawee MCP server"
 }

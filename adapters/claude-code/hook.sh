@@ -38,8 +38,12 @@ else:
     transcript = ev.get("transcript_path")
     if isinstance(transcript, str) and transcript:
         argv += ["--transcript", transcript]
+quiet = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
 try:
-    subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+    if event == "SessionEnd":
+        subprocess.Popen(argv, start_new_session=True, **quiet)
+    else:
+        subprocess.run(argv, timeout=20, **quiet)
 except Exception:
     pass
 ' "$event" "$sid" "$clawee" >/dev/null 2>&1 || true
