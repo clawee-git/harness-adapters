@@ -13,7 +13,9 @@ resume it after a crash (`CONTRACT.md` §8).
   one it keys `~/.grok/sessions/` by, made absolute. Never the hook's working
   directory, `GROK_WORKSPACE_ROOT` or `CLAUDE_PROJECT_DIR`: Grok runs hooks in
   the workspace root and sets both to it.
-- No `--transcript`: Grok events carry no transcript path.
+- No `--transcript`: a resume start (`source:"load"`) and `SessionEnd` do carry
+  `transcriptPath`, but a new session's start, the event that names the
+  conversation first, has none, so the adapter never sends `--transcript`.
 - An event carrying `subagentType` (a child session) is ignored, start and end.
 - Grok also runs `~/.claude/settings.json` hooks; the Claude Code adapter stays
   silent on `SessionStart` / `SessionEnd` when `GROK_HOOK_EVENT` is set, so
@@ -24,12 +26,16 @@ resume it after a crash (`CONTRACT.md` §8).
 ## End reasons
 
 The adapter sends `--clear` only for `SessionEnd` reasons proven on Grok to
-mark a deliberate end. **None is proven yet** for 1.0.92: its guide names no
-values, and the logging-hook probe (quit by `/exit` or Ctrl-D, SIGHUP,
-SIGTERM) has not been run. Until it is, the set is empty and Grok never
-clears. That is safe: after a deliberate quit the shell is back in front, so
-claweed does not treat the report as in force. Proven values go into
-`deliberate_end_reasons` in `hook.sh` and into this section.
+mark a deliberate end. The logging-hook probe on Grok 1.0.92 showed `/exit`,
+`/quit`, Ctrl-C twice and HUP all give `shutdown`; Ctrl-Q only quits from the
+splash screen. No reason tells a deliberate end apart, so the clear set is
+empty and the report is always kept. That is safe: after a deliberate quit the
+shell is back in front, so claweed does not treat the report as in force.
+Proven values go into `deliberate_end_reasons` in `hook.sh` and into this
+section.
+
+Hook timeout, seen on Grok 1.0.92: a hook over its `timeout` is killed with its
+process tree, for example "timed out after 10000ms".
 
 ## Install, update, remove
 
