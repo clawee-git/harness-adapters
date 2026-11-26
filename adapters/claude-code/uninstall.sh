@@ -24,7 +24,7 @@ path, adir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     cfg = json.load(f) or {}
 hooks = cfg.get("hooks", {})
-for event in ("Notification", "Stop", "UserPromptSubmit"):
+for event in ("Notification", "Stop", "UserPromptSubmit", "SessionStart", "SessionEnd"):
     cmd = f"{adir}/hook.sh {event}"
     kept = []
     for e in hooks.get(event, []):

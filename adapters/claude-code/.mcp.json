@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "clawee": {
+      "command": "clawee",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}
