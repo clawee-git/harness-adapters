@@ -4,15 +4,15 @@ dir="$(cd "$(dirname "$0")" && pwd)"
 hooks="${CODEX_HOME:-$HOME/.codex}/hooks.json"
 [ -f "$hooks" ] || exit 0
 python3 - "$hooks" "$dir" <<'PY'
-import json, sys
+import json, shlex, sys
 path, adir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     cfg = json.load(f) or {}
-cmd = f"{adir}/hook.sh SessionStart"
+cmds = (f"{shlex.quote(adir + '/hook.sh')} SessionStart", f"{adir}/hook.sh SessionStart")
 hooks = cfg.get("hooks", {})
 kept = []
 for e in hooks.get("SessionStart", []):
-    e["hooks"] = [h for h in e.get("hooks", []) if h.get("command") != cmd]
+    e["hooks"] = [h for h in e.get("hooks", []) if h.get("command") not in cmds]
     if e["hooks"]:
         kept.append(e)
 if kept:

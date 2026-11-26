@@ -6,12 +6,16 @@ mkdir -p "$(dirname "$hooks")"
 [ -f "$hooks" ] || printf '{}\n' > "$hooks"
 cp -n "$hooks" "$hooks.clawee-bak" 2>/dev/null || true
 python3 - "$hooks" "$dir" <<'PY'
-import json, sys
+import json, shlex, sys
 path, adir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     cfg = json.load(f) or {}
-cmd = f"{adir}/hook.sh SessionStart"
+cmd = f"{shlex.quote(adir + '/hook.sh')} SessionStart"
+legacy = f"{adir}/hook.sh SessionStart"
 entries = cfg.setdefault("hooks", {}).setdefault("SessionStart", [])
+for h in (h for e in entries for h in e.get("hooks", [])):
+    if h.get("command") == legacy:
+        h["command"] = cmd
 if not any(h.get("command") == cmd for e in entries for h in e.get("hooks", [])):
     entries.append({"hooks": [{"type": "command", "command": cmd, "timeout": 20}]})
 with open(path, "w") as f:

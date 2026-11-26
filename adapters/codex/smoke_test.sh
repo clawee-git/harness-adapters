@@ -83,5 +83,16 @@ python3 - "$hooks" "$tmp/original.json" <<'PY' || fail "uninstall removed hooks 
 import json, sys
 assert json.load(open(sys.argv[1])) == json.load(open(sys.argv[2]))
 PY
+spaced="$tmp/with space/codex"
+mkdir -p "$tmp/with space"
+cp -R "$here" "$spaced"
+printf '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"%s/hook.sh SessionStart"}]}]}}\n' "$spaced" > "$hooks"
+sh "$spaced/install.sh" >/dev/null || fail "install from a folder with a space exited non-zero"
+cmd="$(python3 -c 'import json,sys; print([h["command"] for e in json.load(open(sys.argv[1]))["hooks"]["SessionStart"] for h in e["hooks"]][-1])' "$hooks")"
+: > "$FAKE_CLAWEE_LOG"
+start_event null startup | sh -c "$cmd" || fail "installed command from a folder with a space failed: $cmd"
+[ "$(cat "$FAKE_CLAWEE_LOG")" = "$report" ] || fail "installed command from a folder with a space did not report: $(cat "$FAKE_CLAWEE_LOG")"
+sh "$spaced/uninstall.sh" >/dev/null || fail "uninstall from a folder with a space exited non-zero"
+[ "$(cat "$hooks")" = "{}" ] || fail "uninstall left quoted or legacy hooks: $(cat "$hooks")"
 [ ! -e "$HOME/.codex" ] || fail "install touched HOME/.codex with CODEX_HOME set"
 echo "codex adapter: ok"
