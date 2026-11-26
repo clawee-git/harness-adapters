@@ -75,9 +75,25 @@ sh "$here/uninstall.sh" >/dev/null || fail "second uninstall exited non-zero"
 cmp -s "$HOME/.grok/hooks/mine.json" "$tmp/mine.json" || fail "uninstall touched another hook file"
 
 printf '{"hooks":{}}\n' > "$file"
+cp "$file" "$tmp/foreign.json"
 out="$(sh "$here/uninstall.sh" 2>&1)" || fail "uninstall of a foreign clawee.json exited non-zero"
 [ -f "$file" ] || fail "uninstall removed a clawee.json it did not write"
+if out="$(sh "$here/install.sh" 2>&1)"; then fail "install overwrote a clawee.json it did not write"; fi
+case "$out" in *"not written by this adapter"*) ;; *) fail "install refusal did not say why: $out" ;; esac
+cmp -s "$file" "$tmp/foreign.json" || fail "install refusal changed the foreign file"
 rm -f "$file"
+
+spaced="$tmp/with space/grok"
+mkdir -p "$tmp/with space"
+cp -R "$here" "$spaced"
+printf '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"%s/hook.sh SessionStart"}]}],"SessionEnd":[{"hooks":[{"type":"command","command":"%s/hook.sh SessionEnd"}]}]}}\n' "$spaced" "$spaced" > "$file"
+sh "$spaced/install.sh" >/dev/null || fail "install over its own legacy file exited non-zero"
+cmd="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["hooks"]["SessionStart"][0]["hooks"][0]["command"])' "$file")"
+: > "$FAKE_CLAWEE_LOG"
+start_event new | sh -c "$cmd" || fail "installed command from a folder with a space failed: $cmd"
+[ "$(cat "$FAKE_CLAWEE_LOG")" = "$report" ] || fail "installed command from a folder with a space did not report: $(cat "$FAKE_CLAWEE_LOG")"
+sh "$spaced/uninstall.sh" >/dev/null || fail "uninstall from a folder with a space exited non-zero"
+[ ! -e "$file" ] || fail "uninstall left the quoted hook file"
 
 export GROK_HOME="$tmp/grokhome"
 sh "$here/install.sh" >/dev/null || fail "install under GROK_HOME exited non-zero"

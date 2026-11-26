@@ -38,7 +38,9 @@ adapters/grok/install.sh      # writes ${GROK_HOME:-~/.grok}/hooks/clawee.json
 adapters/grok/uninstall.sh    # removes that file, only if this adapter wrote it
 ```
 
-One file of its own, so no other hook is touched. Each handler has a 10 s
+One file of its own, so no other hook is touched; `install.sh` refuses when a
+`clawee.json` there was not written by this adapter. The `--clear` call, once a
+reason is proven, is started detached so the hook returns at once. Each handler has a 10 s
 `timeout` (Grok's `SessionEnd` default is 1.5 s) and the call itself is cut
 at 8 s. Grok runs your hooks only in a trusted folder (`/hooks-trust`; your
 home directory always counts). Re-run `install.sh` after moving the checkout.

@@ -31,8 +31,12 @@ else:
     if not isinstance(start, str) or not start:
         sys.exit(0)
     argv += [session, "--start-dir", os.path.abspath(start)]
+quiet = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
 try:
-    subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=8)
+    if event == "SessionEnd":
+        subprocess.Popen(argv, start_new_session=True, **quiet)
+    else:
+        subprocess.run(argv, timeout=8, **quiet)
 except Exception:
     pass
 ' "$event" "$sid" "$clawee" >/dev/null 2>&1 || true
