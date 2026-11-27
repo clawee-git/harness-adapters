@@ -2,18 +2,36 @@
 set -eu
 dir="$(cd "$(dirname "$0")" && pwd)"
 settings="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
+python3 - "$settings" .claude/settings.json .claude/settings.local.json <<'PY'
+import json, sys
+for path in sys.argv[1:]:
+    try:
+        with open(path) as f:
+            enabled = (json.load(f) or {}).get("enabledPlugins") or {}
+    except Exception:
+        continue
+    on = sorted(k for k, v in enabled.items() if v is True and k.split("@")[0] == "clawee")
+    if on:
+        print(f"the clawee plugin is enabled in {path} ({', '.join(on)}): it already carries these hooks and the MCP server; install.sh not run", file=sys.stderr)
+        sys.exit(1)
+print("note: managed settings and other projects' .claude/ settings are not checked for the clawee plugin", file=sys.stderr)
+PY
 mkdir -p "$(dirname "$settings")"
 [ -f "$settings" ] || printf '{}\n' > "$settings"
 cp -n "$settings" "$settings.clawee-bak" 2>/dev/null || true
 python3 - "$settings" "$dir" <<'PY'
-import json, sys
+import json, shlex, sys
 path, adir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     cfg = json.load(f) or {}
 hooks = cfg.setdefault("hooks", {})
-for event in ("Notification", "Stop", "UserPromptSubmit"):
-    cmd = f"{adir}/hook.sh {event}"
+for event in ("Notification", "Stop", "UserPromptSubmit", "SessionStart", "SessionEnd"):
+    cmd = f"{shlex.quote(adir + '/hook.sh')} {event}"
+    legacy = f"{adir}/hook.sh {event}"
     entries = hooks.setdefault(event, [])
+    for h in (h for e in entries for h in e.get("hooks", [])):
+        if h.get("command") == legacy:
+            h["command"] = cmd
     present = any(h.get("command") == cmd for e in entries for h in e.get("hooks", []))
     if not present:
         entries.append({"hooks": [{"type": "command", "command": cmd}]})

@@ -3,21 +3,50 @@
     "Notification": [
       {
         "hooks": [
-          { "type": "command", "command": "__ADAPTER_DIR__/hook.sh Notification" }
+          {
+            "type": "command",
+            "command": "__ADAPTER_DIR__/hook.sh Notification"
+          }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "__ADAPTER_DIR__/hook.sh Stop" }
+          {
+            "type": "command",
+            "command": "__ADAPTER_DIR__/hook.sh Stop"
+          }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "__ADAPTER_DIR__/hook.sh UserPromptSubmit" }
+          {
+            "type": "command",
+            "command": "__ADAPTER_DIR__/hook.sh UserPromptSubmit"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__ADAPTER_DIR__/hook.sh SessionStart"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__ADAPTER_DIR__/hook.sh SessionEnd"
+          }
         ]
       }
     ]
